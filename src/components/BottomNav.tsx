@@ -16,7 +16,11 @@ export const BottomNav = () => {
 
   return (
     <div className="fixed bottom-6 left-4 right-4 z-50">
-      <div className="glass-panel rounded-2xl flex justify-around items-center p-2 bg-[#022C22]/90 backdrop-blur-2xl border border-neon-blue/30 shadow-[0_0_30px_rgba(74,222,128,0.25)]">
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="glass-panel rounded-2xl flex justify-around items-center p-2 bg-space-dark/80 backdrop-blur-2xl border border-neon-blue/40 shadow-[0_10px_40px_rgba(0,229,255,0.3)] neon-glow-blue"
+      >
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
           const Icon = tab.icon;
@@ -26,25 +30,37 @@ export const BottomNav = () => {
               key={tab.path}
               to={tab.path}
               className={cn(
-                "relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-300",
+                "relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-500",
                 isActive ? "text-neon-blue scale-110" : "text-gray-400 hover:text-white hover:scale-105"
               )}
             >
               {isActive && (
                 <motion.div
                   layoutId="nav-pill"
-                  className="absolute inset-0 bg-neon-blue/15 rounded-xl border border-neon-blue/50 shadow-[0_0_15px_rgba(74,222,128,0.4)]"
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="absolute inset-0 bg-neon-blue/20 rounded-xl border border-neon-blue/60 shadow-[0_0_20px_rgba(0,229,255,0.5)]"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
               <div className="relative z-10 flex flex-col items-center">
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={cn("transition-all duration-300", isActive && "drop-shadow-[0_0_8px_rgba(74,222,128,0.8)]")} />
-                <span className={cn("text-[10px] mt-1 font-medium transition-all duration-300", isActive ? "opacity-100 font-bold" : "opacity-70")}>{tab.name}</span>
+                <Icon 
+                  size={24} 
+                  strokeWidth={isActive ? 2.5 : 2} 
+                  className={cn(
+                    "transition-all duration-500", 
+                    isActive && "drop-shadow-[0_0_12px_rgba(0,229,255,1)]"
+                  )} 
+                />
+                <span className={cn(
+                  "text-[10px] mt-1 font-medium transition-all duration-500", 
+                  isActive ? "opacity-100 font-bold tracking-wider" : "opacity-60"
+                )}>
+                  {tab.name}
+                </span>
               </div>
             </Link>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { Card } from '@/components/Card';
 import { ChevronRight, Star, Shield, Flame, Map, Users, Tent, Sparkles } from 'lucide-react';
 
 import { InstallPWA } from '@/components/InstallPWA';
+import { ParallaxBackground } from '@/components/ParallaxBackground';
 
 export const Home = () => {
   const containerVariants = {
@@ -31,36 +32,22 @@ export const Home = () => {
 
   return (
     <motion.div 
-      className="space-y-16 pb-20"
+      className="space-y-16 pb-20 relative"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
+      <ParallaxBackground />
       <InstallPWA />
       {/* Hero Section */}
       <section className="text-center space-y-10 pt-20 pb-12 relative z-10 overflow-visible">
-        {/* Background Effects */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-neon-blue/5 rounded-full blur-[120px] -z-10 animate-pulse pointer-events-none" />
-        
         <motion.div variants={itemVariants} className="relative px-4">
-          {/* Decorative Rings */}
-          <motion.div 
-            animate={{ rotate: 360 }}
-            transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full -z-10 pointer-events-none"
-          />
-          <motion.div 
-            animate={{ rotate: -360 }}
-            transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] border border-dashed border-white/10 rounded-full -z-10 pointer-events-none"
-          />
-
           {/* Badge */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-3 py-2 px-6 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl text-sm font-bold tracking-[0.2em] text-neon-blue mb-10 uppercase shadow-[0_0_30px_rgba(74,222,128,0.15)] hover:bg-white/10 transition-colors cursor-default"
+            className="inline-flex items-center gap-3 py-2 px-6 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl text-sm font-bold tracking-[0.2em] text-neon-blue mb-10 uppercase shadow-[0_0_30px_rgba(0,229,255,0.15)] hover:bg-white/10 transition-colors cursor-default"
           >
             <Sparkles size={14} className="animate-pulse" /> 
             <span>Clube de Desbravadores</span>

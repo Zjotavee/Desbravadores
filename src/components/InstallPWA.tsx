@@ -64,19 +64,23 @@ export const InstallPWA = () => {
       >
         <motion.div
           animate={{ 
-            boxShadow: ["0 0 20px rgba(74,222,128,0.3)", "0 0 35px rgba(74,222,128,0.6)", "0 0 20px rgba(74,222,128,0.3)"],
-            scale: [1, 1.02, 1]
+            boxShadow: [
+              "0 0 20px rgba(255,193,7,0.3)", 
+              "0 0 40px rgba(255,193,7,0.7)", 
+              "0 0 20px rgba(255,193,7,0.3)"
+            ],
+            y: [0, -5, 0]
           }}
-          transition={{ duration: 2, repeat: Infinity }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           className="rounded-xl"
         >
           <Button
             variant="neon"
             size="sm"
             onClick={handleInstallClick}
-            className="bg-[#064E3B] border-neon-blue text-neon-blue font-bold tracking-wide hover:bg-[#064E3B]/80"
+            className="bg-[#161B2E] border-neon-gold text-neon-gold font-bold tracking-widest hover:bg-[#161B2E]/80 px-6 py-3 text-xs uppercase shadow-[0_0_20px_rgba(255,193,7,0.4)]"
           >
-            <Download size={16} className="mr-2" />
+            <Download size={18} className="mr-2 animate-bounce" />
             Instalar App
           </Button>
         </motion.div>

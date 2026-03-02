@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
-import { Search, Filter, Plus, Sparkles, X, Clock, Users, Box } from 'lucide-react';
+import { Search, Filter, Plus, Sparkles, X, Clock, Users, Box, Trash2 } from 'lucide-react';
 import { Activity } from '@/types';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { generateJSON } from '@/services/gemini';
+import { supabaseService } from '@/services/supabaseService';
 
 const INITIAL_ACTIVITIES: Activity[] = [
   {
@@ -32,12 +32,32 @@ const INITIAL_ACTIVITIES: Activity[] = [
 ];
 
 export const Activities = () => {
-  const [activities, setActivities] = useLocalStorage<Activity[]>('activities', INITIAL_ACTIVITIES);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadActivities = async () => {
+      try {
+        const data = await supabaseService.getActivities();
+        if (data && data.length > 0) {
+          setActivities(data);
+        } else {
+          setActivities(INITIAL_ACTIVITIES);
+        }
+      } catch (error) {
+        console.error('Failed to load activities from Supabase:', error);
+        setActivities(INITIAL_ACTIVITIES);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadActivities();
+  }, []);
 
   // Form State
   const [formData, setFormData] = useState<Partial<Activity>>({
@@ -50,7 +70,7 @@ export const Activities = () => {
     steps: []
   });
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.title || !formData.category) return;
     
     const newActivity: Activity = {
@@ -64,9 +84,27 @@ export const Activities = () => {
       steps: formData.steps || [],
     };
 
+    // Optimistic update
     setActivities(prev => [newActivity, ...prev]);
     setIsCreating(false);
     setFormData({ title: '', category: 'recreativa', materials: [], steps: [] });
+
+    try {
+      await supabaseService.saveActivity(newActivity);
+    } catch (error) {
+      console.error('Failed to save activity to Supabase:', error);
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    if (confirm("Deseja excluir esta atividade?")) {
+      setActivities(prev => prev.filter(a => a.id !== id));
+      try {
+        await supabaseService.deleteActivity(id);
+      } catch (error) {
+        console.error('Failed to delete activity:', error);
+      }
+    }
   };
 
   const handleGenerateActivity = async () => {
@@ -113,10 +151,25 @@ export const Activities = () => {
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-white">Atividades</h1>
-        <Button size="sm" variant="neon" onClick={() => setIsCreating(true)}>
-          <Plus size={16} className="mr-1" /> Criar
-        </Button>
       </div>
+
+      {/* Floating Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        animate={{ 
+          boxShadow: [
+            "0 0 20px rgba(0,229,255,0.4)", 
+            "0 0 35px rgba(0,229,255,0.7)", 
+            "0 0 20px rgba(0,229,255,0.4)"
+          ]
+        }}
+        transition={{ duration: 2, repeat: Infinity }}
+        onClick={() => setIsCreating(true)}
+        className="fixed bottom-24 right-6 z-40 w-14 h-14 rounded-full bg-neon-blue text-space-dark flex items-center justify-center border-2 border-white/20 transition-all duration-300"
+      >
+        <Plus size={28} strokeWidth={3} />
+      </motion.button>
 
       {/* Search & Filter */}
       <div className="flex gap-2">
@@ -169,8 +222,16 @@ export const Activities = () => {
                   </span>
                   <h3 className="text-lg font-bold text-white mt-1 group-hover:text-neon-blue transition-colors">{activity.title}</h3>
                 </div>
-                <div className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded flex items-center gap-1">
-                  <Clock size={12} /> {activity.duration}
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded flex items-center gap-1">
+                    <Clock size={12} /> {activity.duration}
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteActivity(activity.id); }}
+                    className="p-1.5 text-gray-400 hover:text-red-400 transition-colors rounded-full hover:bg-white/5"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
               

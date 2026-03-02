@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card } from '@/components/Card';
 import { BookOpen, CheckCircle, Heart, Share2, Plus, Sparkles } from 'lucide-react';
@@ -6,6 +6,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SpiritualContent } from '@/types';
 import { Button } from '@/components/Button';
 import { MeditationGenerator } from './MeditationGenerator';
+import { supabaseService } from '@/services/supabaseService';
 
 const INITIAL_CONTENT: SpiritualContent[] = [
   {
@@ -40,24 +41,71 @@ const INITIAL_CONTENT: SpiritualContent[] = [
 ];
 
 export const Spirituality = () => {
-  const [contents, setContents] = useLocalStorage<SpiritualContent[]>('spiritual-content', INITIAL_CONTENT);
+  const [contents, setContents] = useState<SpiritualContent[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const toggleComplete = (id: string) => {
-    setContents(prev => prev.map(c => 
-      c.id === id ? { ...c, isCompleted: !c.isCompleted } : c
-    ));
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        const data = await supabaseService.getSpiritualContent();
+        if (data && data.length > 0) {
+          setContents(data);
+        } else {
+          setContents(INITIAL_CONTENT);
+        }
+      } catch (error) {
+        console.error('Failed to load from Supabase, falling back to initial content:', error);
+        setContents(INITIAL_CONTENT);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadContent();
+  }, []);
+
+  const toggleComplete = async (id: string) => {
+    const item = contents.find(c => c.id === id);
+    if (!item) return;
+
+    const updatedItem = { ...item, isCompleted: !item.isCompleted };
+    
+    // Optimistic update
+    setContents(prev => prev.map(c => c.id === id ? updatedItem : c));
+
+    try {
+      await supabaseService.saveSpiritualContent(updatedItem);
+    } catch (error) {
+      console.error('Failed to sync completion to Supabase:', error);
+    }
   };
 
-  const toggleFavorite = (id: string) => {
-    setContents(prev => prev.map(c => 
-      c.id === id ? { ...c, isFavorite: !c.isFavorite } : c
-    ));
+  const toggleFavorite = async (id: string) => {
+    const item = contents.find(c => c.id === id);
+    if (!item) return;
+
+    const updatedItem = { ...item, isFavorite: !item.isFavorite };
+    
+    // Optimistic update
+    setContents(prev => prev.map(c => c.id === id ? updatedItem : c));
+
+    try {
+      await supabaseService.saveSpiritualContent(updatedItem);
+    } catch (error) {
+      console.error('Failed to sync favorite to Supabase:', error);
+    }
   };
 
-  const handleSaveGenerated = (newContent: SpiritualContent) => {
+  const handleSaveGenerated = async (newContent: SpiritualContent) => {
+    // Optimistic update
     setContents(prev => [newContent, ...prev]);
     setIsGenerating(false);
+
+    try {
+      await supabaseService.saveSpiritualContent(newContent);
+    } catch (error) {
+      console.error('Failed to save generated content to Supabase:', error);
+    }
   };
 
   if (isGenerating) {
@@ -87,10 +135,25 @@ export const Spirituality = () => {
             {contents.filter(c => c.isCompleted).length} / {contents.length} concluídos
           </div>
         </div>
-        <Button onClick={() => setIsGenerating(true)} variant="neon" size="sm">
-          <Sparkles size={16} className="mr-2" /> Gerar
-        </Button>
       </header>
+
+      {/* Floating Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        animate={{ 
+          boxShadow: [
+            "0 0 20px rgba(255,193,7,0.4)", 
+            "0 0 35px rgba(255,193,7,0.7)", 
+            "0 0 20px rgba(255,193,7,0.4)"
+          ]
+        }}
+        transition={{ duration: 2, repeat: Infinity }}
+        onClick={() => setIsGenerating(true)}
+        className="fixed bottom-24 right-6 z-40 w-14 h-14 rounded-full bg-neon-gold text-space-dark flex items-center justify-center border-2 border-white/20 transition-all duration-300"
+      >
+        <Sparkles size={28} strokeWidth={3} />
+      </motion.button>
 
       <div className="grid gap-4">
         {contents.map((item, index) => (

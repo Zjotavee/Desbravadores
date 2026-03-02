@@ -1,18 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Calendar as CalendarIcon, Clock, MapPin, Users, Sparkles, X, Plus, Save, Trash2 } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Meeting, MeetingTemplate } from '@/types';
 import { generateJSON } from '@/services/gemini';
 import { v4 as uuidv4 } from 'uuid';
+import { supabaseService } from '@/services/supabaseService';
 
 export const Agenda = () => {
-  const [meetings, setMeetings] = useLocalStorage<Meeting[]>('meetings', []);
-  const [customTemplates, setCustomTemplates] = useLocalStorage<MeetingTemplate[]>('custom-templates', []);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<MeetingTemplate[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [meetingsData, templatesData] = await Promise.all([
+          supabaseService.getMeetings(),
+          supabaseService.getTemplates()
+        ]);
+        setMeetings(meetingsData || []);
+        setCustomTemplates(templatesData || []);
+      } catch (error) {
+        console.error('Failed to load data from Supabase:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
   
   // Form State
   const [formData, setFormData] = useState<Partial<Meeting>>({
@@ -52,7 +71,7 @@ export const Agenda = () => {
     });
   };
 
-  const handleSaveTemplate = (meeting: Meeting) => {
+  const handleSaveTemplate = async (meeting: Meeting) => {
     const templateName = prompt("Nome do modelo:", meeting.title);
     if (!templateName) return;
 
@@ -69,13 +88,27 @@ export const Agenda = () => {
       program: meeting.program
     };
 
+    // Optimistic update
     setCustomTemplates(prev => [...prev, newTemplate]);
-    alert("Modelo salvo com sucesso!");
+    
+    try {
+      await supabaseService.saveTemplate(newTemplate);
+      alert("Modelo salvo com sucesso!");
+    } catch (error) {
+      console.error('Failed to save template to Supabase:', error);
+    }
   };
 
-  const handleDeleteTemplate = (id: string) => {
+  const handleDeleteTemplate = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este modelo?")) {
+      // Optimistic update
       setCustomTemplates(prev => prev.filter(t => t.id !== id));
+      
+      try {
+        await supabaseService.deleteTemplate(id);
+      } catch (error) {
+        console.error('Failed to delete template:', error);
+      }
     }
   };
 
@@ -136,7 +169,7 @@ export const Agenda = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title || !formData.date) return;
     
     const newMeeting: Meeting = {
@@ -154,19 +187,52 @@ export const Agenda = () => {
       program: formData.program as any
     };
 
+    // Optimistic update
     setMeetings(prev => [...prev, newMeeting]);
     setIsCreating(false);
     setFormData({ title: '', date: '', time: '', theme: '', ageGroup: '10-15' });
+
+    try {
+      await supabaseService.saveMeeting(newMeeting);
+    } catch (error) {
+      console.error('Failed to save meeting to Supabase:', error);
+    }
+  };
+
+  const handleDeleteMeeting = async (id: string) => {
+    if (confirm("Deseja excluir esta reunião?")) {
+      setMeetings(prev => prev.filter(m => m.id !== id));
+      try {
+        await supabaseService.deleteMeeting(id);
+      } catch (error) {
+        console.error('Failed to delete meeting:', error);
+      }
+    }
   };
 
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-white">Agenda</h1>
-        <Button onClick={() => setIsCreating(true)} size="sm">
-          <Plus size={16} className="mr-1" /> Nova Reunião
-        </Button>
       </div>
+
+      {/* Floating Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        animate={{ 
+          boxShadow: [
+            "0 0 20px rgba(0,229,255,0.4)", 
+            "0 0 35px rgba(0,229,255,0.7)", 
+            "0 0 20px rgba(0,229,255,0.4)"
+          ]
+        }}
+        transition={{ duration: 2, repeat: Infinity }}
+        onClick={() => setIsCreating(true)}
+        className="fixed bottom-24 right-6 z-40 w-14 h-14 rounded-full bg-neon-blue text-space-dark flex items-center justify-center border-2 border-white/20 transition-all duration-300"
+      >
+        <Plus size={28} strokeWidth={3} />
+      </motion.button>
 
       {/* Meeting List */}
       <div className="space-y-4">
@@ -201,6 +267,13 @@ export const Agenda = () => {
                       title="Salvar como Modelo"
                     >
                       <Save size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteMeeting(meeting.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-400 transition-colors rounded-full hover:bg-white/5"
+                      title="Excluir Reunião"
+                    >
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
